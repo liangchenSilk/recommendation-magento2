@@ -28,7 +28,7 @@ try:
     print("table 'count' create success")
     
     #create table product mapping
-    cursor.execute("DROP TABLE IF EXISTS rec_product_index_mapping")
+    cursor.execute("DROP TABLE IF EXISTS rec_index_product_mapping")
     sql = """CREATE TABLE rec_index_product_mapping (
             id INT(11) auto_increment primary key NOT NULL,
             product_id INT(11) NOT NULL)"""
@@ -36,7 +36,7 @@ try:
     print("table 'product mapping' create success")
     
     #create table customer mapping
-    cursor.execute("DROP TABLE IF EXISTS rec_customer_index_mapping")
+    cursor.execute("DROP TABLE IF EXISTS rec_index_customer_mapping")
     sql = """CREATE TABLE rec_index_customer_mapping (
             id INT(11) auto_increment primary key NOT NULL,
             customer_id INT(11) NOT NULL)"""
@@ -54,7 +54,7 @@ try:
     
     
     #create table category mapping
-    cursor.execute("DROP TABLE IF EXISTS rec_category_index_mapping")
+    cursor.execute("DROP TABLE IF EXISTS rec_index_category_mapping")
     sql = """CREATE TABLE rec_index_category_mapping (
             id INT(11) auto_increment primary key NOT NULL,
             category_id INT(11) NOT NULL)"""

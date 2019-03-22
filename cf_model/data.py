@@ -17,53 +17,17 @@ class Data():
         mydb = db_info.config['database']
         myport = db_info.config['port']
         self.db = pymysql.connect(host=myhost,user=myuser,password=mypassword,db=mydb,port=myport)
-
         self.cursor = self.db.cursor()
+        
         self.product_map, self.reverse_map = self.getProductMapping()
         self.customer_map = self.getCustomerMapping()
         self.category_map = self.getCategoryMapping()
         
-    def getProductMapping(self):
-        product_map = {}
-        reverse_map = {}
-        productMapQuery = "SELECT * FROM rec_index_product_mapping"
-        self.cursor.execute(productMapQuery)
-        productMapResults = self.cursor.fetchall()
-        for row in productMapResults:
-            index = int(row[0])
-            product_id = int(row[1])
-            product_map[product_id] = index
-            reverse_map[index] = product_id
-            #print(product_map[product_id])
-        return product_map, reverse_map
-        
-    def getCustomerMapping(self):
-        customer_map = {}
-        customerMapQuery = "SELECT * FROM rec_index_customer_mapping"
-        self.cursor.execute(customerMapQuery)
-        customerMapResults = self.cursor.fetchall()
-        for row in customerMapResults:
-            index= row[0]
-            customer_id = row[1]
-            customer_map[customer_id] = index
-            #print(customer_map[customer_id])
-        return customer_map
-
-    def getCategoryMapping(self):
-        category_map = {}
-        categoryMapQuery = "SELECT * FROM rec_index_category_mapping"
-        self.cursor.execute(categoryMapQuery)
-        categoryMapResults = self.cursor.fetchall()
-        for row in categoryMapResults:
-            index= row[0]
-            category_id = row[1]
-            category_map[category_id] = index
-            #print(customer_map[customer_id])
-        return category_map
+    
         
     #prepage training data from user_product_count table
-    def getOrderData(self):
-        trainX = np.zeros([len(self.product_map), len(self.customer_map)])
+    def getCountData(self):
+        trainY = np.zeros([len(self.product_map), len(self.customer_map)])
         trainR = np.zeros([len(self.product_map), len(self.customer_map)])
         getCountQuery = "SELECT * FROM rec_user_product_count"
         self.cursor.execute(getCountQuery)
@@ -72,15 +36,15 @@ class Data():
             customer = row[1]
             product = row[2]
             count = row[3]
-            trainX[self.product_map[product] - 1][self.customer_map[customer] - 1] = count
+            trainY[self.product_map[product] - 1][self.customer_map[customer] - 1] = count
             if count > 0:
                 trainR[self.product_map[product] - 1][self.customer_map[customer] - 1] = 1
         print("trainning matrix load ready")
         #normalize based on single customer to a 0-10 scale
         #base = np.amax(trainX, axis=0)
-        #trainX = np.where(np.max(trainX, axis=0)==0, trainX, trainX*10./np.max(trainX, axis=0))
+        #trainY = np.where(np.max(trainX, axis=0)==0, trainX, trainX*10./np.max(trainX, axis=0))
         #print(base)
-        return trainX, trainR
+        return trainY, trainR
     
     #get viewed products by customer from table report_viewed_product_index
     def getViewedData(self):
@@ -139,3 +103,42 @@ class Data():
             print("failed to update data")
             print(str(e))
             self.db.rollback()
+
+
+    def getProductMapping(self):
+        product_map = {}
+        reverse_map = {}
+        productMapQuery = "SELECT * FROM rec_index_product_mapping"
+        self.cursor.execute(productMapQuery)
+        productMapResults = self.cursor.fetchall()
+        for row in productMapResults:
+            index = int(row[0])
+            product_id = int(row[1])
+            product_map[product_id] = index
+            reverse_map[index] = product_id
+            #print(product_map[product_id])
+        return product_map, reverse_map
+        
+    def getCustomerMapping(self):
+        customer_map = {}
+        customerMapQuery = "SELECT * FROM rec_index_customer_mapping"
+        self.cursor.execute(customerMapQuery)
+        customerMapResults = self.cursor.fetchall()
+        for row in customerMapResults:
+            index= row[0]
+            customer_id = row[1]
+            customer_map[customer_id] = index
+            #print(customer_map[customer_id])
+        return customer_map
+
+    def getCategoryMapping(self):
+        category_map = {}
+        categoryMapQuery = "SELECT * FROM rec_index_category_mapping"
+        self.cursor.execute(categoryMapQuery)
+        categoryMapResults = self.cursor.fetchall()
+        for row in categoryMapResults:
+            index= row[0]
+            category_id = row[1]
+            category_map[category_id] = index
+            #print(customer_map[customer_id])
+        return category_map

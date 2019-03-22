@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Mar 19 22:56:50 2019
-
-@author: Silk
-"""
-
 import numpy as np
 import math
 from data import Data

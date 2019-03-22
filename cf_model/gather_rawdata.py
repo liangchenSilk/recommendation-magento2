@@ -8,7 +8,7 @@ Created on Thu Jan 17 16:52:15 2019
 import db_info
 import pymysql
 
-class Update():
+class GatherRawData():
     def __init__(self):
         myhost = db_info.config['host']
         myuser = db_info.config['user']
@@ -18,60 +18,60 @@ class Update():
         self.db = pymysql.connect(host=myhost,user=myuser,password=mypassword,db=mydb,port=myport)
         self.cursor = self.db.cursor()
 
-    def pickOrderRange(self, start, end):
+    def pickDataRange(self, start, end):
         
         #fetch queries
-        sqlfetch = """select a.customer_id, a.entity_id, b.order_id, b.product_id, b.sku, b.qty_ordered 
+        sqlFetchOrder = """select a.customer_id, a.entity_id, b.order_id, b.product_id, b.sku, b.qty_ordered 
                 from sales_order as a inner join sales_order_item as b on a.entity_id = b.order_id 
                 where a.customer_id is not null 
                 and a.created_at >= %s
                 and a.created_at < %s 
                 order by a.customer_id"""
         
-        sqlfetchviewed = """select a.customer_id, a.product_id, count(product_id)
+        sqlFetchViewRecord = """select a.customer_id, a.product_id, count(product_id)
                         from report_viewed_product_index as a 
                         group by a.customer_id, a.product_id
                         having a.customer_id is not NULL"""
         
-        '''        
-        sqlfetchProCat = """SELECT category_id, product_id FROM catalog_category_product
+              
+        sqlFetchPro2Cat = """SELECT category_id, product_id FROM catalog_category_product
                         WHERE product_id IN 
                         (SELECT product_id FROM rec_product_index_mapping)"""
-        '''
+        
         #truncate queries
-        sqlemptycount = "TRUNCATE TABLE rec_user_product_count"
-        sqlemptyproduct = "TRUNCATE TABLE rec_product_index_mapping"
-        sqlemptycustomer = "TRUNCATE TABLE rec_customer_index_mapping"
-        #sqlemptycategory = "TRUNCATE TABLE rec_category_index_mapping"
-        #sqlemptyprocat = "TRUNCATE TABLE rec_product_category"
+        sqlClearCount = "TRUNCATE TABLE rec_user_product_count"
+        sqlClearProductMapping = "TRUNCATE TABLE rec_product_index_mapping"
+        sqlClearCustomerMapping = "TRUNCATE TABLE rec_customer_index_mapping"
+        sqlClearCategoryMapping = "TRUNCATE TABLE rec_category_index_mapping"
+        sqlClearPro2Cat = "TRUNCATE TABLE rec_product_category"
         
         #insert processed data
-        sqlinsert = "INSERT INTO rec_user_product_count (customer_id, product_id, count) VALUES (%s, %s, %s)"        
-        sqlProductMapping = "INSERT INTO rec_product_index_mapping (product_id) values (%s)"
-        sqlCustomerMapping = "INSERT INTO rec_customer_index_mapping (customer_id) values (%s)"
-        #sqlCategoryMapping = "INSERT INTO rec_category_index_mapping (category_id) values (%s)"
-        #sqlinsertProCat = "INSERT INTO rec_product_category (product_id, category_id) values (%s, %s)"
+        sqlInsertUserProductCount = "INSERT INTO rec_user_product_count (customer_id, product_id, count) VALUES (%s, %s, %s)"        
+        sqlProductIndexMapping = "INSERT INTO rec_product_index_mapping (product_id) values (%s)"
+        sqlCustomerIndexMapping = "INSERT INTO rec_customer_index_mapping (customer_id) values (%s)"
+        sqlCategoryIndexMapping = "INSERT INTO rec_category_index_mapping (category_id) values (%s)"
+        sqlInsertProCat = "INSERT INTO rec_product_category (product_id, category_id) values (%s, %s)"
         
         count = {}
-        #proCat = {}
+        proCat = {}
         product_set = set()
         customer_set = set()
-        #category_set = set()
+        category_set = set()
         
         try:
             print("start with empty tables")
             # start with fresh data range
-            self.cursor.execute(sqlemptycount)
-            self.cursor.execute(sqlemptyproduct)
-            self.cursor.execute(sqlemptycustomer)
-            #self.cursor.execute(sqlemptycategory)
-            #self.cursor.execute(sqlemptyprocat)
+            self.cursor.execute(sqlClearCount)
+            self.cursor.execute(sqlClearProductMapping)
+            self.cursor.execute(sqlClearCustomerMapping)
+            self.cursor.execute(sqlClearCategoryMapping)
+            self.cursor.execute(sqlClearPro2Cat)
             
             #fetch order data: prod, customer, count
-            self.cursor.execute(sqlfetch, [start, end])
+            print("collect order data")
+            self.cursor.execute(sqlFetchOrder, [start, end])
             results = self.cursor.fetchall()
             line = 0
-            print("start with orders")
             for row in results:
                 line = line + 1
                 customer_id = row[0]
@@ -86,14 +86,14 @@ class Update():
                 else:
                     count[customer_id] = {}
                     count[customer_id][product_id] = qty
-                print(line)
+                #print(line)
             print("fetch order success...Total of {} lines".format(line))
             
             #fetch viewed data: product, customer, count
-            self.cursor.execute(sqlfetchviewed)
+            print("collect view history...")
+            self.cursor.execute(sqlFetchViewRecord)
             results = self.cursor.fetchall()
             line = 0
-            print("start with viewed count")
             for row in results:
                 line = line + 1
                 customer_id = row[0]
@@ -108,7 +108,7 @@ class Update():
                 else:
                     count[customer_id] = {}
                     count[customer_id][product_id] = qty
-                print(line)
+                #print(line)
             print("fetch view history success...Total of {} lines".format(line))
                  
             
@@ -117,22 +117,21 @@ class Update():
                 for product, product_count in count[customer].items():
                     params = [customer, product, product_count]
                     #print(params)
-                    self.cursor.execute(sqlinsert, params)
+                    self.cursor.execute(sqlInsertUserProductCount, params)
             print("update count table success")
             
             #update product index mapping     
             for product_id in product_set:
-                self.cursor.execute(sqlProductMapping, [product_id])
+                self.cursor.execute(sqlProductIndexMapping, [product_id])
             print("update product mapping table success")
             
             #update customer index mapping 
             for customer_id in customer_set:
-                self.cursor.execute(sqlCustomerMapping, [customer_id])
-            print("update customer mapping table success")    
+                self.cursor.execute(sqlCustomerIndexMapping, [customer_id])
+            print("update customer mapping table success")          
             
-            '''
             #fetch product category
-            self.cursor.execute(sqlfetchProCat)
+            self.cursor.execute(sqlFetchPro2Cat)
             results = self.cursor.fetchall()
             for row in results:
                 cat = row[0]
@@ -145,17 +144,17 @@ class Update():
                     proCat[pro].append(cat)
                 category_set.add(cat)
                 
-            #update category index mapping
-            for category_id in category_set:
-                self.cursor.execute(sqlCategoryMapping, [category_id])
-            print("update category mapping table success")
-                
             #update pro category table
             for pro in proCat:
                 for cat in proCat[pro]:
-                    self.cursor.execute(sqlinsertProCat, [pro, cat])
+                    self.cursor.execute(sqlInsertProCat, [pro, cat])
             print("update product category table success")
-            '''
+            
+            #update category index mapping
+            for category_id in category_set:
+                self.cursor.execute(sqlCategoryIndexMapping, [category_id])
+            print("update category mapping table success")
+            
             print("all update complete...")
             self.db.commit()
             
