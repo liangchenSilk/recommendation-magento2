@@ -11,11 +11,13 @@ import unicodedata
 from bs4 import BeautifulSoup
 
 import nltk
-nltk.download('stopwords')
+#nltk.download('stopwords')
 from nltk.corpus import stopwords
-#from nltk.stem.snowball import SnowballStemmer
-#from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.stem import PorterStemmer
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+import numpy as np
 
 stop = stopwords.words('english')
 sno = nltk.stem.SnowballStemmer('english')
@@ -42,7 +44,7 @@ def remove_accented_chars(text):
 
 data = {}
 
-with open ('test.csv') as csv_file:
+with open ('raw_data.csv', encoding="utf8") as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     lineNo = 0
     for line in csv_reader:
@@ -50,7 +52,7 @@ with open ('test.csv') as csv_file:
             lineNo += 1
             print("start reading data...")
         else:
-            print("read line" + str(lineNo))
+            #print("read line" + str(lineNo))
             lineNo += 1
             sku = line[0]
             text = []
@@ -61,9 +63,33 @@ with open ('test.csv') as csv_file:
                         if(clean_word not in stop and len(clean_word) > 2):
                             tmp = (sno.stem(clean_word.lower())).encode('utf8')
                             text.append(tmp)
-            data[sku] = b' '.join(text)
-            print(data[sku])
-                
+            if sku not in data:
+                data[sku] = b' '.join(text)
+            else:
+                data[sku] = data[sku] + (b' '.join(text))
 
 
 
+#vectorization
+corpus = []
+mapping = []
+
+for sku in data:
+    #print(sku)
+    #print(data[sku])
+    #print("================")
+    corpus.append(str(data[sku]))
+    mapping.append(sku)
+
+vectorizer = TfidfVectorizer()
+vector = vectorizer.fit_transform(corpus)
+print(vector.shape)
+#print(vectorizer.get_feature_names())
+
+kmeans = KMeans(n_clusters = 100, random_state = 0).fit(vector)
+labels = kmeans.labels_
+for i in range(0,len(labels)):
+    if labels[i] == 30:
+        print(mapping[i])
+        print(str(labels[i]))
+    
