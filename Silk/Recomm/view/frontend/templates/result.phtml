@@ -1,0 +1,6 @@
+<h1>test product set:</h1>
+<?php $_productCollection = $block->getRecentlyViewed(); ?>
+<?php echo "total:".count($_productCollection); ?>
+<?php foreach($_productCollection as $_product): ?>
+	<h2><?php echo $_product->getSku() ?></h2>
+<?php endforeach ?>
